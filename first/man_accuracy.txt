@@ -1,0 +1,3 @@
+Accuracy: 66.79%
+True negatives: 50.30%	False negatives: 13.74%
+False positives: 19.47%	True positives: 16.49%
