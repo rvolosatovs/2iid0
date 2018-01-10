@@ -6,8 +6,9 @@ let
     scikitlearn
     pandas
     numpy
-    matplotlib
+    #matplotlib
     graphviz
+    networkx
   ]);
 in
   pkgs.stdenv.mkDerivation {
@@ -15,5 +16,6 @@ in
     buildInputs = [ 
       python 
       pkgs.python36Packages.jupyter 
+      pkgs.python36Packages.matplotlib
     ];
   }
