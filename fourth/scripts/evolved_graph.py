@@ -17,9 +17,15 @@ Gx = G.copy()
 # Randomly remove edges from the graph
 # Gx.remove_edges_from(random.sample(G.edges(), 20*G.number_of_edges()//100))
 
-# Randomly remove leaf edges from the graph
-leaf_edges = Gx.in_edges(get_leaves(Gx))
-Gx.remove_edges_from(random.sample(list(leaf_edges), 20*len(leaf_edges)//100))
+# Randomly remove leaves from the graph
+leaves = get_leaves(Gx)
+leaf_edges = Gx.in_edges(leaves)
+
+# Remove edges only
+# Gx.remove_edges_from(random.sample(list(leaf_edges), 20*len(leaf_edges)//100))
+
+# Remove both edges and nodes
+Gx.remove_nodes_from(random.sample(leaves, 20*len(leaves)//100))
 
 # Calculate the PageRank
 pr = pagerank(Gx)
