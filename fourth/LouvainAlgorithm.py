@@ -14,4 +14,4 @@ partition = community.best_partition(G)
 
 # partition is the returned results of best_partition
 # it is a dict in Python
-print partition
+print(partition)
