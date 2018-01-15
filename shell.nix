@@ -15,7 +15,7 @@ in
     name = "jupyter-env";
     buildInputs = [ 
       python 
-      pkgs.python36Packages.jupyter 
+      pkgs.python36Packages.jupyter_core
       pkgs.python36Packages.matplotlib
     ];
   }
