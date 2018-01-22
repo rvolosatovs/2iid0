@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,11 +11,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/multi"
-	"gonum.org/v1/gonum/graph/network"
 	"gonum.org/v1/gonum/graph/simple"
 )
 
@@ -286,104 +287,42 @@ func main() {
 		log.Fatalf("Failed to read input: %s", err)
 	}
 
-	ts := make([]time.Time, 0, *n+2)
-	delta := g.End.Sub(g.Start) / time.Duration(*n)
-	for t := g.Start; t.Before(g.End); t = t.Add(delta) {
-		ts = append(ts, t)
-	}
-	ts = append(ts, g.End)
-
-	type Measures struct {
-		InDegree       int      `json:"in_degree"`
-		OutDegree      int      `json:"out_degree"`
-		Closeness      jfloat64 `json:"closeness"`
-		Farness        jfloat64 `json:"farness"`
-		Betweenness    jfloat64 `json:"betweenness"`
-		HITS_Authority jfloat64 `json:"hits_authority"`
-		HITS_Hub       jfloat64 `json:"hits_hub"`
-		PageRank       jfloat64 `json:"pagerank"`
-	}
-
-	measure := func(g graph.Directed) map[int64]Measures {
-		var pr map[int64]float64
-		var cls map[int64]float64
-		var far map[int64]float64
-		var btw map[int64]float64
-		if len(g.Nodes()) < 678907 {
-			//log.Println("Dijkstra...")
-			//as := path.DijkstraAllPaths(g)
-
-			//log.Println("Closeness...")
-			//cls = network.Closeness(g, as)
-
-			//log.Println("Farness...")
-			//far = network.Closeness(g, as)
-
-			//log.Println("PageRank...")
-			//pr = network.PageRank(g, 0.85, 1e-06)
-
-			log.Println("Betweenness...")
-			btw = network.Betweenness(g)
-		}
-
-		log.Println("HITS...")
-		hits := network.HITS(g, 1e-08)
-
-		m := make(map[int64]Measures)
-		for _, n := range g.Nodes() {
-			id := n.ID()
-			m[id] = Measures{
-				InDegree:       len(g.To(n)),
-				OutDegree:      len(g.From(n)),
-				Closeness:      jfloat64(cls[id]),
-				Farness:        jfloat64(far[id]),
-				Betweenness:    jfloat64(btw[id]),
-				HITS_Authority: jfloat64(hits[id].Authority),
-				HITS_Hub:       jfloat64(hits[id].Hub),
-				PageRank:       jfloat64(pr[id]),
-			}
-		}
-		return m
-	}
-
-	edgeList := func(edges []graph.Edge) [][2]int64 {
-		out := make([][2]int64, len(edges))
-		for i, e := range edges {
-			out[i] = [2]int64{e.From().ID(), e.To().ID()}
-		}
-		return out
-	}
-
-	type Snapshot struct {
-		Time     time.Time          `json:"time"`
-		Measures map[int64]Measures `json:"measures"`
-		Edges    [][2]int64         `json:"edges"`
-	}
-
-	os.Stdout.Write([]byte("["))
-
-	enc := json.NewEncoder(os.Stdout)
-
-	log.Println("Measuring original graph...")
-	if err := enc.Encode(Snapshot{
-		Measures: measure(g),
-		Edges:    edgeList(g.Edges()),
-	}); err != nil {
+	if err = os.MkdirAll("data/snapshots/csv", os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 
-	for _, t := range ts {
-		log.Printf("Taking snapshot at %s...", t)
-		tg := g.Snapshot(t)
-		log.Println("Measuring snapshot ...")
-		if err := enc.Encode(Snapshot{
-			Time:     t,
-			Measures: measure(tg),
-			Edges:    edgeList(tg.Edges()),
-		}); err != nil {
-			log.Fatal(err)
-		}
-	}
+	log.Printf("First edge creation took place at %s", g.Start)
+	log.Printf("Last edge removal took place at %s", g.End)
 
-	os.Stdout.Write([]byte("]"))
+	wg := &sync.WaitGroup{}
+	delta := g.End.Sub(g.Start) / time.Duration(*n-1)
+	for i := 0; i < *n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+
+			t := g.Start.Add(time.Duration(i) * delta)
+
+			path := fmt.Sprintf("data/snapshots/csv/%d.csv", t.Unix())
+			log.Printf("Opening %s for writing...", path)
+			f, err := os.Create(path)
+			if err != nil {
+				log.Fatal(err)
+			}
+			w := csv.NewWriter(f)
+
+			log.Printf("Taking snapshot at %s...", t)
+			for _, e := range g.Snapshot(t).Edges() {
+				if err := w.Write([]string{strconv.FormatInt(e.From().ID(), 10), strconv.FormatInt(e.To().ID(), 10)}); err != nil {
+					log.Fatal(err)
+				}
+			}
+
+			w.Flush()
+			if err = w.Error(); err != nil {
+				log.Fatal(err)
+			}
+		}(i)
+	}
+	wg.Wait()
 }
