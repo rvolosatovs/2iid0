@@ -11,4 +11,12 @@ services:
         user: user
         working_dir: /home/user
         tty: true
-        entrypoint: "jupyter notebook --ip 0.0.0.0"
+        entrypoint: bash
+        
+        
+# Run as follows:
+#
+#   - Navigate to wiki folder in command prompt
+#   - Run: docker-compose up -d
+#   - Run: docker exec -it jupyter bash
+#   - Run: jupyter notebook --ip 0.0.0.0

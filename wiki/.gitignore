@@ -3,3 +3,4 @@ data/original.gt
 .ipython
 .local
 .jupyter
+.bash_history
