@@ -1,0 +1,14 @@
+version: '3'
+services:
+    jupyter:
+        image: tiagopeixoto/graph-tool
+        ports:
+            - "8888:8888"
+            - "6006:6006"
+        volumes:
+            - ".:/home/user"
+        container_name: jupyter
+        user: user
+        working_dir: /home/user
+        tty: true
+        entrypoint: "jupyter notebook --ip 0.0.0.0"

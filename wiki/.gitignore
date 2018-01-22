@@ -1,2 +1,5 @@
 data/data.txt
 data/original.gt
+.ipython
+.local
+.jupyter
